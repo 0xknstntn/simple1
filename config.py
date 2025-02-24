@@ -1,15 +1,18 @@
-# config.py
-from transformers import MistralConfig
+from dataclasses import dataclass
 
+@dataclass
 class ModelConfig:
-    MODEL_NAME = "mistralai/Mistral-7B-v0.1"
-    DATASET_NAME = "HuggingFaceH4/ultrachat_200k"
-    MAX_LENGTH = 2048  # Увеличиваем контекстное окно
-    BATCH_SIZE = 2      # Уменьшаем из-за памяти
-    GRAD_ACCUM_STEPS = 16
-    LEARNING_RATE = 1e-5
-    EPOCHS = 2
-    SAVE_DIR = "simple1"
-    LORA_RANK = 64      # Для LoRA адаптера
-    USE_4BIT = True     # 4-битная квантизация
-    USE_FLASH_ATTN = True # Flash Attention
+        model_name: str = "mistralai/Mistral-7B-v0.1"
+        lora_r: int = 16
+        lora_alpha: int = 32
+        lora_dropout: float = 0.05
+
+@dataclass
+class TrainingConfig:
+        dataset_name: str = "OpenAssistant/oasst_top1_2023-08-25"
+        batch_size: int = 2
+        gradient_accumulation: int = 4
+        learning_rate: float = 2e-5
+        epochs: int = 100
+        save_path: str = "./model.safetensors"
+        output_dir: str = "./results"

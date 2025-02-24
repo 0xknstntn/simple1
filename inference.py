@@ -1,46 +1,28 @@
-# inference.py
-from transformers import AutoTokenizer, pipeline
-from peft import PeftModel
+from transformers import AutoTokenizer
+from safetensors.torch import load_model
+from model import Simple1Model
 from config import ModelConfig
 import torch
 
-class MistralAssistant:
-        def __init__(self):
-                self.tokenizer = AutoTokenizer.from_pretrained(ModelConfig.MODEL_NAME)
-                base_model = AutoModelForCausalLM.from_pretrained(
-                        ModelConfig.MODEL_NAME,
-                        load_in_4bit=True,
-                        torch_dtype=torch.bfloat16,
-                        device_map="auto"
-                )
-                self.model = PeftModel.from_pretrained(
-                        base_model,
-                        ModelConfig.SAVE_DIR
-                )
-                self.pipe = pipeline(
-                        "text-generation",
-                        model=self.model,
-                        tokenizer=self.tokenizer,
-                        device_map="auto",
-                )
-                
-        def generate(self, prompt):
-                messages = [
-                        {"role": "user", "content": prompt}
-                ]
-                
-                prompt = self.tokenizer.apply_chat_template(
-                        messages,
-                        tokenize=False,
-                        add_generation_prompt=True
-                )
-                
-                outputs = self.pipe(
-                        prompt,
-                        max_new_tokens=512,
-                        temperature=0.7,
-                        do_sample=True,
-                        pad_token_id=self.tokenizer.eos_token_id
-                )
-                
-                return outputs[0]['generated_text'].split("<|assistant|>")[-1].strip()
+def generate(prompt: str, model_path: str):
+        # Инициализация
+        tokenizer = AutoTokenizer.from_pretrained(ModelConfig().model_name)
+        model = Simple1Model(ModelConfig())
+        
+        # Загрузка весов
+        load_model(model, model_path)
+        model.to("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Генерация
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        outputs = model.generate(
+                inputs.input_ids,
+                max_length=200,
+                temperature=0.7
+        )
+        return tokenizer.decode(outputs[0])
+
+if __name__ == "__main__":
+        import sys
+        prompt = sys.argv[1] if len(sys.argv) > 1 else "Hello!"
+        print(generate(prompt, TrainingConfig().save_path))

@@ -1,51 +1,39 @@
-# model.py
-from transformers import MistralForCausalLM
+import torch.nn as nn
+from transformers import AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model
 from config import ModelConfig
 
-class Simple1(MistralForCausalLM):
-        def __init__(self, config):
-                super().__init__(config)
-                # Добавляем дополнительные слои для reasoning
-                self.reasoning_layers = nn.ModuleList([
-                        nn.TransformerDecoderLayer(
-                                d_model=config.hidden_size,
-                                nhead=config.num_attention_heads
-                        ) for _ in range(2)
-                ])
-                
-        def forward(self, input_ids=None, attention_mask=None, **kwargs):
-                outputs = super().forward(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        output_hidden_states=True,
-                        **kwargs
+class Simple1Model(nn.Module):
+        def __init__(self, cfg: ModelConfig):
+                super().__init__()
+                self.base_model = AutoModelForCausalLM.from_pretrained(cfg.model_name)
+                self._add_reasoning_layers()
+                self._setup_lora(cfg)
+    
+        def _add_reasoning_layers(self):
+                # Добавление reasoning блоков
+                hidden_size = self.base_model.config.hidden_size
+                self.reasoning = nn.TransformerEncoder(
+                        encoder_layer=nn.TransformerEncoderLayer(
+                                d_model=hidden_size,
+                                nhead=self.base_model.config.num_attention_heads
+                        ),
+                        num_layers=2
                 )
-                
-                # Применяем reasoning слои к последним скрытым состояниям
-                hidden_states = outputs.hidden_states[-1]
-                for layer in self.reasoning_layers:
-                        hidden_states = layer(hidden_states, hidden_states)
-                        
-                logits = self.lm_head(hidden_states)
-                return (logits,) + outputs[1:]
-
-def setup_model():
-        model = Simple1.from_pretrained(
-                ModelConfig.MODEL_NAME,
-                load_in_4bit=ModelConfig.USE_4BIT,
-                torch_dtype=torch.bfloat16,
-                device_map="auto"
-        )
-        
-        # Настройка LoRA
-        lora_config = LoraConfig(
-                r=ModelConfig.LORA_RANK,
-                lora_alpha=32,
-                target_modules=["q_proj", "v_proj"],
-                lora_dropout=0.05,
-                bias="none",
-                task_type="CAUSAL_LM"
-        )
-        
-        return get_peft_model(model, lora_config)
+    
+        def _setup_lora(self, cfg: ModelConfig):
+                # Настройка LoRA
+                lora_config = LoraConfig(
+                        r=cfg.lora_r,
+                        lora_alpha=cfg.lora_alpha,
+                        target_modules=["q_proj", "v_proj"],
+                        lora_dropout=cfg.lora_dropout,
+                        task_type="CAUSAL_LM"
+                )
+                self.base_model = get_peft_model(self.base_model, lora_config)
+    
+        def forward(self, inputs):
+                # Реализация forward pass
+                outputs = self.base_model(**inputs, output_hidden_states=True)
+                processed = self.reasoning(outputs.hidden_states[-1])
+                return self.base_model.lm_head(processed)
