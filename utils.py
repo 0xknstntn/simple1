@@ -14,7 +14,7 @@ def preprocess_data(dataset: Dataset) -> Dataset:
                 """Полноценное форматирование диалога"""
                 dialog = []
                 for msg in example['message_tree']:
-                        if msg['parent'] is None:  # Начало диалога
+                        if msg['parent'] is None:
                                 dialog.append(f"User: {msg['content']}")
                         else:
                                 role = 'Assistant' if msg['role'] == 'bot' else 'User'
@@ -38,17 +38,13 @@ def preprocess_data(dataset: Dataset) -> Dataset:
                         "labels": tokenized["input_ids"].squeeze().clone()
                 }
 
-        # Если dataset в формате DatasetDict (train/test split)
         if isinstance(dataset, dict):
                 dataset = dataset['train']
         
-        # Применяем преобразования
-        dataset = dataset.map(_format_text)
+        #dataset = dataset.map(_format_text)
         
-        # Получаем список реальных колонок после преобразований
         columns_to_remove = list(dataset.features.keys())
     
-        # Токенизация и удаление исходных колонок
         processed = dataset.map(
                 _tokenize_fn,
                 batched=True,
@@ -57,7 +53,6 @@ def preprocess_data(dataset: Dataset) -> Dataset:
                 num_proc=4
         )
         
-        # Фильтрация пустых примеров
         processed = processed.filter(
                 lambda ex: any(ex["input_ids"]),
                 num_proc=4

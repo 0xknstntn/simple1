@@ -5,15 +5,12 @@ from config import ModelConfig
 import torch
 
 def generate(prompt: str, model_path: str):
-        # Инициализация
         tokenizer = AutoTokenizer.from_pretrained(ModelConfig().model_name)
         model = Simple1Model(ModelConfig())
         
-        # Загрузка весов
         load_model(model, model_path)
         model.to("cuda" if torch.cuda.is_available() else "cpu")
         
-        # Генерация
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         outputs = model.generate(
                 inputs.input_ids,

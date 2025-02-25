@@ -8,24 +8,18 @@ from huggingface_hub import login
 from dotenv import load_dotenv
 import os
 
-# Load environment variables from a .env file
 load_dotenv()
-
 login(os.getenv('HF_KEY'))
 
 def train():
-        # Инициализация конфигов
         model_cfg = ModelConfig()
         train_cfg = TrainingConfig()
         
-        # Загрузка данных
         dataset = load_dataset(train_cfg.dataset_name)
         dataset = preprocess_data(dataset)
         
-        # Инициализация модели
         model = Simple1Model(model_cfg)
     
-        # Настройка обучения
         training_args = TrainingArguments(
                 output_dir=train_cfg.output_dir,
                 per_device_train_batch_size=train_cfg.batch_size,
@@ -37,7 +31,6 @@ def train():
                 save_strategy="epoch"
         )
     
-        # Запуск обучения
         trainer = Trainer(
                 model=model,
                 args=training_args,
@@ -46,7 +39,6 @@ def train():
         )
         trainer.train()
     
-        # Финализация
         model.save_pretrained(train_cfg.output_dir)
 
 if __name__ == "__main__":

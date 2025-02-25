@@ -11,18 +11,16 @@ class Simple1Model(nn.Module):
                 self._setup_lora(cfg)
     
         def _add_reasoning_layers(self):
-                # Добавление reasoning блоков
                 hidden_size = self.base_model.config.hidden_size
                 self.reasoning = nn.TransformerEncoder(
                         encoder_layer=nn.TransformerEncoderLayer(
                                 d_model=hidden_size,
                                 nhead=self.base_model.config.num_attention_heads
                         ),
-                        num_layers=2
+                        num_layers=cfg.reasoning_layers
                 )
     
         def _setup_lora(self, cfg: ModelConfig):
-                # Настройка LoRA
                 lora_config = LoraConfig(
                         r=cfg.lora_r,
                         lora_alpha=cfg.lora_alpha,
@@ -33,7 +31,6 @@ class Simple1Model(nn.Module):
                 self.base_model = get_peft_model(self.base_model, lora_config)
     
         def forward(self, inputs):
-                # Реализация forward pass
                 outputs = self.base_model(**inputs, output_hidden_states=True)
                 processed = self.reasoning(outputs.hidden_states[-1])
                 return self.base_model.lm_head(processed)
