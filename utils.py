@@ -4,6 +4,10 @@ from datasets import Dataset
 from config import ModelConfig
 import torch
 
+def save_model(model, path):
+        # Implementation to save the model
+        model.save_pretrained(path)
+
 def preprocess_data(dataset: Dataset) -> Dataset:
         """Подготовка диалоговых данных для обучения"""
         model_cfg = ModelConfig()

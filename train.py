@@ -72,8 +72,8 @@ def train():
                 learning_rate=train_cfg.learning_rate,
                 num_train_epochs=train_cfg.epochs,
                 fp16=True,
-                logging_steps=50,
-                save_strategy="epoch",
+                logging_steps=10,
+                save_strategy="steps",
                 remove_unused_columns=False
         )
     
@@ -86,7 +86,7 @@ def train():
         )
         trainer.train()
     
-        model.save_pretrained(train_cfg.output_dir)
+        trainer.save_model(train_cfg.output_dir)
 
 if __name__ == "__main__":
         train()
