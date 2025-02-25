@@ -7,13 +7,12 @@ import torch
 def preprocess_data(dataset: Dataset) -> Dataset:
         """Подготовка диалоговых данных для обучения"""
         model_cfg = ModelConfig()
-        
-        # Загрузка токенизатора
         tokenizer = AutoTokenizer.from_pretrained(model_cfg.model_name)
         tokenizer.pad_token = tokenizer.eos_token
 
-        def _combine_messages(example):
-                """Объединение сообщений диалога в единый текст"""
+        def _format_dialog(example):
+                """Форматирование диалога в единую строку"""
+                # Для датасета OpenAssistant структура messages
                 return {
                         "text": "\n".join(
                                 [f"{m['role']}: {m['content']}" for m in example['messages']]
@@ -22,10 +21,7 @@ def preprocess_data(dataset: Dataset) -> Dataset:
 
         def _tokenize_fn(examples):
                 """Токенизация с обработкой последовательностей"""
-                # Объединение диалогов
-                texts = [_combine_messages(ex)['text'] for ex in examples]
-                
-                # Токенизация с учетом максимальной длины
+                texts = [ex['text'] for ex in examples]
                 tokenized = tokenizer(
                         texts,
                         max_length=512,
@@ -34,25 +30,34 @@ def preprocess_data(dataset: Dataset) -> Dataset:
                         return_tensors="pt",
                         return_attention_mask=True
                 )
-                
-                # Создание labels для языкового моделирования
-                tokenized["labels"] = tokenized["input_ids"].clone()
-                
-                # Конвертация в numpy для совместимости с Dataset
-                return {k: v.numpy() for k, v in tokenized.items()}
+                return {
+                        "input_ids": tokenized["input_ids"].squeeze(),
+                        "attention_mask": tokenized["attention_mask"].squeeze(),
+                        "labels": tokenized["input_ids"].squeeze().clone()
+                }
 
-        # Применение обработки
+        # Если dataset в формате DatasetDict (train/test split)
+        if isinstance(dataset, dict):
+                dataset = dataset['train']
+        
+        # Применяем преобразования
+        dataset = dataset.map(_format_dialog)
+        
+        # Получаем список реальных колонок после преобразований
+        columns_to_remove = list(dataset.features.keys())
+    
+        # Токенизация и удаление исходных колонок
         processed = dataset.map(
                 _tokenize_fn,
                 batched=True,
                 batch_size=1000,
-                remove_columns=dataset.column_names,
+                remove_columns=columns_to_remove,
                 num_proc=4
         )
-
+        
         # Фильтрация пустых примеров
         processed = processed.filter(
-                lambda ex: ex["input_ids"].any(),
+                lambda ex: any(ex["input_ids"]),
                 num_proc=4
         )
         
