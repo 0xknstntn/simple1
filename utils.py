@@ -1,4 +1,5 @@
 from transformers import AutoTokenizer
+from transformers import TrainerCallback
 from datasets import Dataset
 from config import ModelConfig
 import torch
