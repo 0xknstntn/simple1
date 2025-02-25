@@ -52,6 +52,3 @@ def preprocess_data(dataset: Dataset) -> Dataset:
 class SafeSaveCallback(TrainerCallback):
         def __init__(self, save_path: str):
                 self.save_path = save_path
-        
-        def on_epoch_end(self, args, state, control, **kwargs):
-                save_model(kwargs['model'], self.save_path)
