@@ -13,35 +13,25 @@ def preprocess_data(dataset: Dataset) -> Dataset:
         def _format_text(example):
                 """Полноценное форматирование диалога"""
                 dialog = []
-                for msg in example['message_tree']:
-                        if msg['parent'] is None:
-                                dialog.append(f"User: {msg['content']}")
-                        else:
-                                role = 'Assistant' if msg['role'] == 'bot' else 'User'
-                                dialog.append(f"{role}: {msg['content']}")
+                for msg in example:
+                        dialog.append(msg)
                 return {"text": "\n".join(dialog)}
 
         def _tokenize_fn(examples):
                 """Токенизация с обработкой последовательностей"""
-                texts = [ex['text'] for ex in examples]
-                tokenized = tokenizer(
-                        texts,
-                        max_length=512,
+                return tokenizer(
+                        examples["text"],
+                        max_length=2048,
                         truncation=True,
                         padding="max_length",
                         return_tensors="pt",
                         return_attention_mask=True
                 )
-                return {
-                        "input_ids": tokenized["input_ids"].squeeze(),
-                        "attention_mask": tokenized["attention_mask"].squeeze(),
-                        "labels": tokenized["input_ids"].squeeze().clone()
-                }
 
         if isinstance(dataset, dict):
                 dataset = dataset['train']
         
-        #dataset = dataset.map(_format_text)
+        dataset = dataset.map(_format_text)
         
         columns_to_remove = list(dataset.features.keys())
     
@@ -53,12 +43,7 @@ def preprocess_data(dataset: Dataset) -> Dataset:
                 num_proc=4
         )
         
-        processed = processed.filter(
-                lambda ex: any(ex["input_ids"]),
-                num_proc=4
-        )
-        
-        return processed.train_test_split(test_size=0.1)
+        return  processed.train_test_split(test_size=0.1)
 
 class SafeSaveCallback(TrainerCallback):
         def __init__(self, save_path: str):

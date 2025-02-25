@@ -1,4 +1,5 @@
 from transformers import Trainer, TrainingArguments
+import torch.nn.functional as F
 from datasets import load_dataset
 from safetensors.torch import save_model
 from model import Simple1Model
@@ -7,9 +8,49 @@ from utils import preprocess_data, SafeSaveCallback
 from huggingface_hub import login
 from dotenv import load_dotenv
 import os
+import torch
 
 load_dotenv()
 login(os.getenv('HF_KEY'))
+
+def data_collator(data):
+        # Convert lists to tensors
+        for x in data:
+                if isinstance(x['input_ids'], list):
+                        x['input_ids'] = torch.tensor(x['input_ids'])
+                if isinstance(x['attention_mask'], list):
+                        x['attention_mask'] = torch.tensor(x['attention_mask'])
+
+        return {
+                'input_ids': torch.stack([x['input_ids'] for x in data]),
+                'attention_mask': torch.stack([x['attention_mask'] for x in data]),
+                'labels': torch.stack([x['input_ids'] for x in data])
+        }
+
+class CustomTrainer(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+                # Forward pass
+                labels = inputs.pop("labels")
+                outputs = model(**inputs)
+                logits = outputs
+
+                # Compute loss
+                loss = self.custom_compute_loss(logits, labels)
+
+                return (loss, outputs) if return_outputs else loss
+
+        def custom_compute_loss(self, model_output, target):
+                # Reshape model_output to (batch_size * seq_len, vocab_size)
+                model_output_reshaped = model_output.view(-1, model_output.size(-1))
+
+                # Reshape target to (batch_size * seq_len)
+                target_reshaped = target.view(-1)
+
+                # Compute the loss
+                loss = F.cross_entropy(model_output_reshaped, target_reshaped)
+
+                return loss
+
 
 def train():
         model_cfg = ModelConfig()
@@ -17,6 +58,10 @@ def train():
         
         dataset = load_dataset(train_cfg.dataset_name)
         dataset = preprocess_data(dataset)
+
+        print(dataset)
+        if isinstance(dataset, dict):
+                dataset = dataset['train']
         
         model = Simple1Model(model_cfg)
     
@@ -28,14 +73,16 @@ def train():
                 num_train_epochs=train_cfg.epochs,
                 fp16=True,
                 logging_steps=50,
-                save_strategy="epoch"
+                save_strategy="epoch",
+                remove_unused_columns=False
         )
     
-        trainer = Trainer(
+        trainer = CustomTrainer(
                 model=model,
                 args=training_args,
-                train_dataset=dataset["train"],
-                callbacks=[SafeSaveCallback(train_cfg.save_path)]
+                train_dataset=dataset,
+                callbacks=[SafeSaveCallback(train_cfg.save_path)],
+                data_collator=data_collator
         )
         trainer.train()
     
