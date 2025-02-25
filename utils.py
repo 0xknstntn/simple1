@@ -41,22 +41,22 @@ def preprocess_data(dataset: Dataset) -> Dataset:
                 # Конвертация в numpy для совместимости с Dataset
                 return {k: v.numpy() for k, v in tokenized.items()}
 
-                # Применение обработки
-                processed = dataset.map(
-                        _tokenize_fn,
-                        batched=True,
-                        batch_size=1000,
-                        remove_columns=dataset.column_names,
-                        num_proc=4
-                )
+        # Применение обработки
+        processed = dataset.map(
+                _tokenize_fn,
+                batched=True,
+                batch_size=1000,
+                remove_columns=dataset.column_names,
+                num_proc=4
+        )
+
+        # Фильтрация пустых примеров
+        processed = processed.filter(
+                lambda ex: ex["input_ids"].any(),
+                num_proc=4
+        )
         
-                # Фильтрация пустых примеров
-                processed = processed.filter(
-                        lambda ex: ex["input_ids"].any(),
-                        num_proc=4
-                )
-                
-                return processed.train_test_split(test_size=0.1)
+        return processed.train_test_split(test_size=0.1)
 
 class SafeSaveCallback(TrainerCallback):
         def __init__(self, save_path: str):
