@@ -73,7 +73,7 @@ def train():
                 num_train_epochs=train_cfg.epochs,
                 fp16=True,
                 logging_steps=10,
-                save_strategy="steps",
+                #save_strategy="steps",
                 remove_unused_columns=False
         )
     
