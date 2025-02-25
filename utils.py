@@ -10,14 +10,16 @@ def preprocess_data(dataset: Dataset) -> Dataset:
         tokenizer = AutoTokenizer.from_pretrained(model_cfg.model_name)
         tokenizer.pad_token = tokenizer.eos_token
 
-        def _format_dialog(example):
-                """Форматирование диалога в единую строку"""
-                # Для датасета OpenAssistant структура messages
-                return {
-                        "text": "\n".join(
-                                [f"{m['role']}: {m['content']}" for m in example['messages']]
-                        )
-                }
+        def _format_text(example):
+                """Полноценное форматирование диалога"""
+                dialog = []
+                for msg in example['message_tree']:
+                        if msg['parent'] is None:  # Начало диалога
+                                dialog.append(f"User: {msg['content']}")
+                        else:
+                                role = 'Assistant' if msg['role'] == 'bot' else 'User'
+                                dialog.append(f"{role}: {msg['content']}")
+                return {"text": "\n".join(dialog)}
 
         def _tokenize_fn(examples):
                 """Токенизация с обработкой последовательностей"""
@@ -41,7 +43,7 @@ def preprocess_data(dataset: Dataset) -> Dataset:
                 dataset = dataset['train']
         
         # Применяем преобразования
-        dataset = dataset.map(_format_dialog)
+        dataset = dataset.map(_format_text)
         
         # Получаем список реальных колонок после преобразований
         columns_to_remove = list(dataset.features.keys())
