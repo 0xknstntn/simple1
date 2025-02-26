@@ -59,7 +59,6 @@ def train():
         dataset = load_dataset(train_cfg.dataset_name)
         dataset = preprocess_data(dataset)
 
-        print(dataset)
         if isinstance(dataset, dict):
                 dataset = dataset['train']
         
@@ -72,8 +71,7 @@ def train():
                 learning_rate=train_cfg.learning_rate,
                 num_train_epochs=train_cfg.epochs,
                 fp16=True,
-                logging_steps=10,
-                #save_strategy="steps",
+                logging_steps=100,
                 remove_unused_columns=False
         )
     

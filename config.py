@@ -13,7 +13,7 @@ class TrainingConfig:
         batch_size: int = 2
         gradient_accumulation: int = 8
         learning_rate: float = 2e-5
-        epochs: int = 3
+        epochs: int = 2
         save_path: str = "./model.safetensors"
         output_dir: str = "./results"
         reasoning_layers: int = 4
