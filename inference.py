@@ -9,7 +9,7 @@ def generate(prompt: str, model_path: str):
         model = Simple1Model(ModelConfig())
         
         load_model(model, model_path)
-        load_model(model, model_path)
+
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model.to(device)
         
