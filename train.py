@@ -14,7 +14,6 @@ load_dotenv()
 login(os.getenv('HF_KEY'))
 
 def data_collator(data):
-        # Convert lists to tensors
         for x in data:
                 if isinstance(x['input_ids'], list):
                         x['input_ids'] = torch.tensor(x['input_ids'])
@@ -29,24 +28,16 @@ def data_collator(data):
 
 class CustomTrainer(Trainer):
         def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
-                # Forward pass
                 labels = inputs.pop("labels")
                 outputs = model(**inputs)
                 logits = outputs
-
-                # Compute loss
                 loss = self.custom_compute_loss(logits, labels)
 
                 return (loss, outputs) if return_outputs else loss
 
         def custom_compute_loss(self, model_output, target):
-                # Reshape model_output to (batch_size * seq_len, vocab_size)
                 model_output_reshaped = model_output.view(-1, model_output.size(-1))
-
-                # Reshape target to (batch_size * seq_len)
                 target_reshaped = target.view(-1)
-
-                # Compute the loss
                 loss = F.cross_entropy(model_output_reshaped, target_reshaped)
 
                 return loss
@@ -79,7 +70,6 @@ def train():
                 model=model,
                 args=training_args,
                 train_dataset=dataset,
-                callbacks=[SafeSaveCallback(train_cfg.save_path)],
                 data_collator=data_collator
         )
         trainer.train()

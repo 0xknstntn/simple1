@@ -9,7 +9,6 @@ class Simple1Model(nn.Module):
                 self.base_model = AutoModelForCausalLM.from_pretrained(cfg.model_name)
                 self._add_reasoning_layers()
                 self._setup_lora(cfg)
-                #self.num_layers = cfg.reasoning_layers
 
         def _add_reasoning_layers(self):
                 hidden_size = self.base_model.config.hidden_size
@@ -18,7 +17,7 @@ class Simple1Model(nn.Module):
                                 d_model=hidden_size,
                                 nhead=self.base_model.config.num_attention_heads
                         ),
-                        num_layers=4 #self.num_layers
+                        num_layers=4
                 )
     
         def _setup_lora(self, cfg: ModelConfig):
@@ -40,6 +39,7 @@ class Simple1Model(nn.Module):
                 processed = self.reasoning(outputs.hidden_states[-1])
                 final_output = self.base_model.lm_head(processed)
 
-                #print("Final output shape:", final_output.shape)
-
                 return final_output
+
+        def generate(self, input_ids, attention_mask=None, **kwargs):
+                return self.base_model.generate(input_ids=input_ids, attention_mask=attention_mask, **kwargs)

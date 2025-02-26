@@ -5,24 +5,20 @@ from config import ModelConfig
 import torch
 
 def save_model(model, path):
-        # Implementation to save the model
         model.save_pretrained(path)
 
 def preprocess_data(dataset: Dataset) -> Dataset:
-        """Подготовка диалоговых данных для обучения"""
         model_cfg = ModelConfig()
         tokenizer = AutoTokenizer.from_pretrained(model_cfg.model_name)
         tokenizer.pad_token = tokenizer.eos_token
 
         def _format_text(example):
-                """Полноценное форматирование диалога"""
                 dialog = []
                 for msg in example:
                         dialog.append(msg)
                 return {"text": "\n".join(dialog)}
 
         def _tokenize_fn(examples):
-                """Токенизация с обработкой последовательностей"""
                 return tokenizer(
                         examples["text"],
                         max_length=2048,

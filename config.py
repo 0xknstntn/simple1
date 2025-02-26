@@ -16,4 +16,3 @@ class TrainingConfig:
         epochs: int = 2
         save_path: str = "./model.safetensors"
         output_dir: str = "./results"
-        reasoning_layers: int = 4

@@ -9,9 +9,11 @@ def generate(prompt: str, model_path: str):
         model = Simple1Model(ModelConfig())
         
         load_model(model, model_path)
-        model.to("cuda" if torch.cuda.is_available() else "cpu")
+        load_model(model, model_path)
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model.to(device)
         
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
         outputs = model.generate(
                 inputs.input_ids,
                 max_length=200,
@@ -22,4 +24,4 @@ def generate(prompt: str, model_path: str):
 if __name__ == "__main__":
         import sys
         prompt = sys.argv[1] if len(sys.argv) > 1 else "Hello!"
-        print(generate(prompt, TrainingConfig().save_path))
+        print("response: ", generate(prompt, TrainingConfig().save_path))
